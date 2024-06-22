@@ -1,0 +1,151 @@
+composer create-project --prefer-dist laravel/laravel school_demo
+// database/migrations/2023_02_20_000000_create_students_table.php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+
+class CreateStudentsTable extends Migration
+{
+    public function up()
+    {
+        Schema::create('students', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('email');
+            $table->text('address');
+            $table->timestamp('created_at')->useCurrent();
+            $table->integer('class_id');
+            $table->string('image');
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('students');
+    }
+}
+// database/migrations/2023_02_20_000001_create_classes_table.php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+
+class CreateClassesTable extends Migration
+{
+    public function up()
+    {
+        Schema::create('classes', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->timestamp('created_at')->useCurrent();
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('classes');
+    }
+}
+php artisan migrate
+// app/Http/Controllers/HomeController.php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\Student;
+
+class HomeController extends Controller
+{
+    public function index()
+    {
+        $students = Student::with('class')->get();
+        return view('home', compact('students'));
+    }
+}
+// app/Http/Controllers/CreateStudentController.php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\Student;
+use App\Models\Class;
+
+class CreateStudentController extends Controller
+{
+    public function create()
+    {
+        $classes = Class::all();
+        return view('create', compact('classes'));
+    }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'name' => 'required',
+            'email' => 'required',
+            'address' => 'required',
+            'class_id' => 'required',
+            'image' => 'required|image|mimes:jpg,png',
+        ]);
+
+        $image = $request->file('image');
+        $image_path = 'uploads/' . uniqid() . '_' . $image->getClientOriginalName();
+        $image->move(public_path('uploads'), $image_path);
+
+        $student = new Student();
+        $student->name = $request->input('name');
+        $student->email = $request->input('email');
+        $student->address = $request->input('address');
+        $student->class_id = $request->input('class_id');
+        $student->image = $image_path;
+        $student->save();
+
+        return redirect()->route('home');
+    }
+}
+// app/Http/Controllers/ViewStudentController.php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\Student;
+
+class ViewStudentController extends Controller
+{
+    public function show($id)
+    {
+        $student = Student::with('class')->find($id);
+        return view('view', compact('student'));
+    }
+}
+// app/Http/Controllers/EditStudentController.php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\Student;
+use App\Models\Class;
+
+class EditStudentController extends Controller
+{
+    public function edit($id)
+    {
+        $student = Student::with('class')->find($id);
+        $classes = Class::all();
+        return view('edit', compact('student', 'classes'));
+    }
+
+    public function update(Request $request, $id)
+    {
+        $request->validate([
+            'name' => 'required',
+            'email' => 'required',
+            'address' => 'required',
+            'class_id' => 'required',
+            'image' => 'image|mimes:jpg,png',
+        ]);
+
+        $student = Student::find($id);
+        $student->name = $request->input('name');
+        $student->email = $request->input('email');
+        $student->address
+
